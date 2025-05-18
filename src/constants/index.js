@@ -60,13 +60,13 @@ export const navigation = [
   {
     id: "4",
     title: "New account",
-    url: "#signup",
+    url: "/signup",
     onlyMobile: true,
   },
   {
     id: "5",
     title: "Sign in",
-    url: "#login",
+    url: "/login",
     onlyMobile: true,
   },
 ];
@@ -78,9 +78,9 @@ export const notificationImages = [notification4, notification3, notification2];
 export const companyLogos = [yourlogo, yourlogo, yourlogo, yourlogo, yourlogo];
 
 export const brainwaveServices = [
-  "Photo generating",
-  "Photo enhance",
-  "Seamless Integration",
+  "Instant EMI breakdowns with charts",
+  "AI learning from user patterns",
+  "Supports multiple loan scenarios",
 ];
 
 export const brainwaveServicesIcons = [
@@ -94,34 +94,34 @@ export const brainwaveServicesIcons = [
 export const roadmap = [
   {
     id: "0",
-    title: "Voice recognition",
-    text: "Enable the chatbot to understand and respond to voice commands, making it easier for users to interact with the app hands-free.",
-    date: "May 2023",
+    title: "Basic EMI Calculator",
+    text: "Launch the core EMI calculator functionality allowing users to compute monthly installments based on principal, interest rate, and tenure.",
+    date: "May 2024",
     status: "done",
     imageUrl: roadmap1,
     colorful: true,
   },
   {
     id: "1",
-    title: "Gamification",
-    text: "Add game-like elements, such as badges or leaderboards, to incentivize users to engage with the chatbot more frequently.",
-    date: "May 2023",
+    title: "AI-Powered Repayment Suggestions",
+    text: "Introduce AI-based recommendations for optimal repayment strategies, based on user profile and loan type.",
+    date: "June 2024",
     status: "progress",
     imageUrl: roadmap2,
   },
   {
     id: "2",
-    title: "Chatbot customization",
-    text: "Allow users to customize the chatbot's appearance and behavior, making it more engaging and fun to interact with.",
-    date: "May 2023",
+    title: "User Dashboard & Loan History",
+    text: "Develop a personalized dashboard to help users track their past calculations, compare loans, and visualize payment schedules.",
+    date: "July 2024",
     status: "done",
     imageUrl: roadmap3,
   },
   {
     id: "3",
-    title: "Integration with APIs",
-    text: "Allow the chatbot to access external data sources, such as weather APIs or news APIs, to provide more relevant recommendations.",
-    date: "May 2023",
+    title: "Bank & API Integration",
+    text: "Enable the tool to fetch live interest rates and auto-fill data using integrations with financial institutions and public APIs.",
+    date: "August 2024",
     status: "progress",
     imageUrl: roadmap4,
   },

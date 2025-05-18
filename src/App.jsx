@@ -1,27 +1,31 @@
+import { Routes, Route } from "react-router-dom";
 import ButtonGradient from "./assets/svg/ButtonGradient";
-import Benefits from "./components/Benefits";
-import Collaboration from "./components/Collaboration";
 import Footer from "./components/Footer";
 import Header from "./components/Header";
-import Hero from "./components/Hero";
-import Pricing from "./components/Pricing";
-import Roadmap from "./components/Roadmap";
-import Services from "./components/Services";
+import HomePage from "./pages/HomePage";
+import SignIn from "./pages/Login"
+import SignUp from "./pages/Signup";
+import Calculator from "./pages/Calculator";
+import ManualCalculator from "./pages/ManualCalculator";
+import AiCalculator from "./pages/AiCalculator";
+import EMIPage from "./pages/Emi";
 
 const App = () => {
   return (
     <>
-      <div className="pt-[4.75rem] lg:pt-[5.25rem] overflow-hidden">
+      <div className="overflow-hidden">
         <Header />
-        <Hero />
-        <Benefits />
-        <Collaboration />
-        <Services />
-        <Pricing />
-        {/* <Roadmap /> */}
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/calculator" element={<Calculator />}></Route>
+          <Route path="/manual" element={<ManualCalculator />}></Route>
+          <Route path="/ai" element={<AiCalculator />}></Route>
+          <Route path="/emi" element={<EMIPage />}></Route>
+        </Routes>
         <Footer />
       </div>
-
       <ButtonGradient />
     </>
   );
