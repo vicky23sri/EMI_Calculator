@@ -217,7 +217,7 @@ const ManualCalculator = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 bg-[radial-gradient(circle_at_center,rgba(42,185,113,0.25)_0,rgba(0,0,0,0)_70%)] pt-28 pb-36">
+    <div className="min-h-screen flex items-center justify-center pt-10">
       <div className="w-full container px-4 relative animate-fade-in">
         {/* Decorative elements */}
         <div className="absolute -top-16 -left-16 w-56 h-56 bg-gradient-to-br from-purple-800 to-blue-800 rounded-full blur-3xl opacity-25 animate-pulse"></div>
@@ -244,7 +244,7 @@ const ManualCalculator = () => {
             </div>
 
             {/* Loan Type Selection */}
-            <div className="grid grid-cols-4 gap-3 mb-8">
+            <div className="grid hidden grid-cols-4 gap-3 mb-8">
               <button 
                 onClick={() => handleLoanTypeChange("home")}
                 className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${loanType === "home" ? "border-emerald-500 bg-emerald-900/20" : "border-gray-700 bg-gray-900/30 hover:bg-gray-800/40"}`}

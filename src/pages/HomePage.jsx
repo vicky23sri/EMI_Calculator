@@ -3,7 +3,7 @@ import Hero from "../components/Hero";
 import Benefits from "../components/Benefits";
 import Collaboration from "../components/Collaboration";
 import Services from "../components/Services";
-import Pricing from "../components/Pricing";
+// import Pricing from "../components/Pricing";
 // import Roadmap from "../components/Roadmap";
 
 const HomePage = () => {
@@ -13,7 +13,7 @@ const HomePage = () => {
       <Benefits />
       <Collaboration />
       <Services />
-      <Pricing />
+      {/* <Pricing /> */}
       {/* <Roadmap /> */}
     </div>
   );

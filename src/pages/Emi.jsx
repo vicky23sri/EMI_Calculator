@@ -179,6 +179,12 @@ const EMIPage = () => {
           <h2 className="text-5xl font-extrabold bg-gradient-to-r from-indigo-300 to-blue-500 bg-clip-text text-transparent mb-16 text-center">
             Demystifying EMI Calculations
           </h2>
+          <p className="text-indigo-200 leading-relaxed text-xl pb-2">
+            EMIs redefine loan repayment, breaking down formidable sums into manageable monthly installments that blend principal and interest with elegance.
+          </p>
+          <p className="text-indigo-200 leading-relaxed text-xl pb-4">
+            Early EMIs focus on interest, gradually shifting to erode the principal, guiding you toward financial liberation with every payment.
+          </p>
           <div className="grid lg:grid-cols-2 gap-20">
             <motion.div
               initial={{ x: -300, opacity: 0 }}
@@ -187,12 +193,22 @@ const EMIPage = () => {
               transition={{ duration: 0.9 }}
               className="space-y-10"
             >
-              <p className="text-indigo-200 leading-relaxed text-xl">
-                EMIs redefine loan repayment, breaking down formidable sums into manageable monthly installments that blend principal and interest with elegance.
-              </p>
-              <p className="text-indigo-200 leading-relaxed text-xl">
-                Early EMIs focus on interest, gradually shifting to erode the principal, guiding you toward financial liberation with every payment.
-              </p>
+              <motion.div
+                whileHover={{ scale: 1.03, boxShadow: "0 0 20px rgba(79, 70, 229, 0.3)" }}
+                className="relative p-10 rounded-3xl bg-gradient-to-br from-black/70 to-indigo-900/50 border border-indigo-600/50 shadow-2xl overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-blue-500/10 animate-pulse" />
+                <h3 className="relative text-3xl font-semibold text-indigo-300 mb-8 z-10">The EMI Formula</h3>
+                <p className="relative text-indigo-100 italic text-2xl z-10">
+                  EMI = P × r × (1 + r)^n / ((1 + r)^n - 1)
+                </p>
+                <ul className="relative mt-8 text-indigo-200 space-y-4 z-10">
+                  <li><span className="font-semibold">P</span> = Principal loan amount</li>
+                  <li><span className="font-semibold">r</span> = Monthly interest rate (Annual rate ÷ 12 ÷ 100)</li>
+                  <li><span className="font-semibold">n</span> = Loan tenure in months</li>
+                </ul>
+              </motion.div>
+
               <motion.div
                 whileHover={{ scale: 1.03, boxShadow: "0 0 20px rgba(79, 70, 229, 0.3)" }}
                 className="relative p-10 rounded-3xl bg-gradient-to-br from-black/70 to-indigo-900/50 border border-indigo-600/50 shadow-2xl overflow-hidden"
@@ -219,7 +235,7 @@ const EMIPage = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-black/70 to-indigo-900/60 rounded-3xl shadow-2xl" />
               <div className="relative p-12 rounded-3xl border border-indigo-600/50 backdrop-blur-2xl">
                 <h3 className="text-3xl font-semibold text-indigo-300 mb-10">Forces Shaping Your EMI</h3>
-                <ul className="space-y-10">
+                <ul className="space-y-5">
                   {[
                     { icon: <DollarSign className="h-10 w-10" />, title: 'Loan Amount', desc: 'Larger loans escalate EMI commitments.' },
                     { icon: <BarChart className="h-10 w-10" />, title: 'Interest Rate', desc: 'Elevated rates amplify monthly payments.' },

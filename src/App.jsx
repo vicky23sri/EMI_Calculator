@@ -9,6 +9,7 @@ import Calculator from "./pages/Calculator";
 import ManualCalculator from "./pages/ManualCalculator";
 import AiCalculator from "./pages/AiCalculator";
 import EMIPage from "./pages/Emi";
+import Dashboard from "./pages/Dashboard";
 
 const App = () => {
   return (
@@ -23,6 +24,7 @@ const App = () => {
           <Route path="/manual" element={<ManualCalculator />}></Route>
           <Route path="/ai" element={<AiCalculator />}></Route>
           <Route path="/emi" element={<EMIPage />}></Route>
+          <Route path="/dashboard" element={<Dashboard />}></Route>
         </Routes>
         <Footer />
       </div>
