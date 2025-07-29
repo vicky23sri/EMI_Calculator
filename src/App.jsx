@@ -10,6 +10,7 @@ import ManualCalculator from "./pages/ManualCalculator";
 import AiCalculator from "./pages/AiCalculator";
 import EMIPage from "./pages/Emi";
 import Dashboard from "./pages/Dashboard";
+import Forgotpassword from "./pages/Forgotpassword";
 
 const App = () => {
   return (
@@ -20,6 +21,7 @@ const App = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/forgotpassword" element={<Forgotpassword />} />
           <Route path="/calculator" element={<Calculator />}></Route>
           <Route path="/manual" element={<ManualCalculator />}></Route>
           <Route path="/ai" element={<AiCalculator />}></Route>

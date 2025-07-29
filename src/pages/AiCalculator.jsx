@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   User, Send, Calculator, Clock, Bot, RefreshCcw, PieChart, ChevronRight,
   Sparkles, Coins, DollarSign, Zap, TrendingUp, ChartBar, Gift,
   Shield, Award, FileText, BriefcaseBusiness, Wallet, CreditCard,
-  ArrowUpRight, ArrowDownCircle, BadgeCheck, BarChart4
+  ArrowUpRight, ArrowDownCircle, BadgeCheck, BarChart4, AlertCircle,
+  CheckCircle, Info, Star
 } from "lucide-react";
 
 const AiFinancialChat = () => {
@@ -86,12 +86,13 @@ const AiFinancialChat = () => {
   const [filteredQuestions, setFilteredQuestions] = useState(predefinedQuestions);
   const [activeCategory, setActiveCategory] = useState("all");
   const [showScrollHint, setShowScrollHint] = useState(true);
-  const [theme, setTheme] = useState("dark"); // dark, light, blue
-  const [uiMode, setUiMode] = useState("chat"); // chat, calculator
+  const [theme, setTheme] = useState("dark");
+  const [uiMode, setUiMode] = useState("chat");
   const [messageCount, setMessageCount] = useState(0);
   const [showFeatureHighlight, setShowFeatureHighlight] = useState(true);
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [sessionId, setSessionId] = useState(null);
 
   // Format timestamp
   const formatTime = (date) => {
@@ -104,13 +105,15 @@ const AiFinancialChat = () => {
 
   // Handle window resize
   useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-      setIsMobile(window.innerWidth < 768);
-    };
+    if (typeof window !== 'undefined') {
+      const handleResize = () => {
+        setWindowWidth(window.innerWidth);
+        setIsMobile(window.innerWidth < 768);
+      };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
   }, []);
 
   // Auto scroll chat to bottom
@@ -122,7 +125,6 @@ const AiFinancialChat = () => {
 
   // Filter questions when search term changes
   useEffect(() => {
-    console.log("Filtered Questions:", filteredQuestions.length);
     const filtered = predefinedQuestions.filter(q =>
       q.text.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (activeCategory === "all" || q.category === activeCategory)
@@ -156,6 +158,38 @@ const AiFinancialChat = () => {
     }
   }, [messageCount]);
 
+  // API call to send message
+  const sendMessageToAPI = async (message) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: message,
+          session_id: sessionId || undefined
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Update session ID if provided
+      if (data.session_id && !sessionId) {
+        setSessionId(data.session_id);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
+  };
+
   // Handle quick question selection
   const handleQuickQuestion = (question) => {
     setCurrentMessage(question);
@@ -163,91 +197,97 @@ const AiFinancialChat = () => {
   };
 
   // Handle user message submission
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!currentMessage.trim()) return;
+
+    const userMessage = currentMessage.trim();
 
     // Add user message
     setMessages(prev => [...prev, {
       type: "user",
-      content: currentMessage,
+      content: userMessage,
       timestamp: new Date()
     }]);
 
     setMessageCount(prev => prev + 1);
+    setCurrentMessage("");
 
     // Show loading state
     setIsLoading(true);
 
-    // Process query and generate response
-    setTimeout(() => {
-      const query = currentMessage.toLowerCase();
-      const newResponse = processUserQuery(query);
-
-      // Add system response
+    try {
+      // Call API
+      const apiResponse = await sendMessageToAPI(userMessage);
+      
+      // Add system response with unified format
       setMessages(prev => [...prev, {
         type: "system",
-        content: newResponse,
-        timestamp: new Date()
+        content: apiResponse.response.message,
+        response: apiResponse.response, // Store full unified response object
+        timestamp: new Date(),
+        modelUsed: apiResponse.model_used
       }]);
+    } catch (error) {
+      // Add error message
+      setMessages(prev => [...prev, {
+        type: "system",
+        content: "I'm sorry, I'm having trouble connecting to my knowledge base right now. Please try again in a moment.",
+        timestamp: new Date(),
+        isError: true
+      }]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
-
-    setCurrentMessage("");
+    }
   };
 
-  // Process user query and generate appropriate response
-  const processUserQuery = (query) => {
-    query = query.toLowerCase();
+  // Render unified structured content from API response
+  const renderStructuredContent = (response) => {
+    if (!response) return null;
 
-    // EMI explanation
-    if (query.includes("what is emi") || query.includes("explain emi")) {
-      return "EMI (Equated Monthly Installment) is the fixed payment amount made by a borrower to a lender at a specified date each calendar month. EMIs consist of both principal and interest components, allowing you to repay your loan in manageable monthly payments. The EMI formula is:\n\nEMI = P × r × (1 + r)^n / ((1 + r)^n - 1)\n\nWhere:\nP = Principal loan amount\nr = Monthly interest rate\nn = Number of monthly installments";
-    }
+    const { message, data, additional_info } = response;
 
-    // Show current calculation
-    else if (query.includes("calculate") || query.includes("show emi") || query.includes("my emi")) {
-      return "Based on your inputs:\n\nLoan Amount: $100,000\nInterest Rate: 8.5%\nLoan Tenure: 5 years\n\nYour monthly EMI would be $2,052.60\nTotal interest payment: $23,156.00\nTotal amount payable: $123,156.00\n\nWould you like to see a year-by-year breakdown of your payments?";
-    }
+    return (
+      <div className="mt-4 space-y-4">
+        {/* Main Content Section */}
+        {data && data.content && (
+          <div className="bg-gradient-to-r from-blue-700/30 to-blue-600/30 rounded-lg p-4 border border-blue-600/40 backdrop-blur-sm">
+            <h4 className="text-blue-300 font-semibold text-sm mb-2 flex items-center">
+              <Info className="h-4 w-4 mr-2 text-blue-400" />
+              Answer
+            </h4>
+            <p className="text-gray-300 text-sm leading-relaxed">{data.content}</p>
+          </div>
+        )}
 
-    // Interest explanation
-    else if (query.includes("interest") || query.includes("rate") || query.includes("reduce")) {
-      return "Interest is the cost of borrowing money, expressed as a percentage rate over a period of time. The current interest rate you've set is 8.5%.\n\nReducing your interest rate by just 1% could save you approximately $2,743.85 over the life of your loan.\n\nWays to reduce interest payments include:\n• Improving your credit score\n• Negotiating with lenders\n• Making larger down payments\n• Refinancing when rates drop\n• Making partial prepayments regularly";
-    }
+        {/* Details Section */}
+        {data && data.details && Array.isArray(data.details) && data.details.length > 0 && (
+          <div className="bg-gradient-to-r from-emerald-700/30 to-emerald-600/30 rounded-lg p-4 border border-emerald-600/40 backdrop-blur-sm">
+            <h4 className="text-emerald-300 font-semibold text-sm mb-3 flex items-center">
+              <CheckCircle className="h-4 w-4 mr-2 text-emerald-400" />
+              Details
+            </h4>
+            <div className="space-y-2">
+              {data.details.map((detail, index) => (
+                <div key={index} className="flex items-start">
+                  <ChevronRight className="h-3 w-3 mr-2 mt-1 text-emerald-400 flex-shrink-0" />
+                  <p className="text-gray-300 text-sm leading-relaxed">{detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-    // Prepayment advice
-    else if (query.includes("prepay") || query.includes("early payment")) {
-      return "Making prepayments can significantly reduce your overall interest burden. By prepaying just 10% of your loan amount annually, you could reduce your loan tenure by approximately 30% and save substantially on interest payments.\n\nBenefits of prepayment:\n• Reduced total interest outgo\n• Shorter loan tenure\n• Improved debt-to-income ratio\n\nAlways check if your loan has any prepayment penalties before making extra payments. Some lenders charge 2-4% of the prepaid amount as penalty.";
-    }
-
-    // Loan tenure explanation
-    else if (query.includes("tenure") || query.includes("duration") || query.includes("term")) {
-      return "Loan tenure refers to the period over which you repay your loan. Longer tenures mean lower monthly payments but higher total interest costs. Shorter tenures mean higher monthly payments but lower overall interest.\n\nFor example, on a $100,000 loan at 8.5%:\n• 5-year term: $2,052.60/month with $23,156 total interest\n• 10-year term: $1,237.52/month with $48,502 total interest\n• 15-year term: $985.46/month with $77,382 total interest\n\nThe ideal tenure balances affordable monthly payments with reasonable total interest costs.";
-    }
-
-    // Fixed vs floating
-    else if (query.includes("fixed") || query.includes("floating")) {
-      return "Fixed interest rates remain constant throughout the loan tenure, providing predictable payments but typically start higher.\n\nFloating rates change with market conditions - they may initially be lower but carry the risk of increasing later.\n\nFixed rates are better when:\n• Current rates are low\n• You prefer payment stability\n• Your budget is tight and can't handle payment increases\n\nFloating rates might save money when:\n• Interest rates are declining\n• You plan to prepay the loan early\n• You can handle some payment volatility";
-    }
-
-    // Credit score advice
-    else if (query.includes("credit score") || query.includes("credit rating")) {
-      return "To improve your credit score:\n\n1. Pay bills on time, every time\n2. Reduce credit utilization below 30%\n3. Don't close old credit accounts\n4. Limit new credit applications\n5. Regularly monitor your credit report for errors\n6. Diversify your credit mix\n7. Settle outstanding debts\n8. Avoid maxing out credit cards\n\nA higher credit score can help you secure loans with lower interest rates, potentially saving thousands over the life of a loan. For example, improving your score from 670 to 740 could reduce your mortgage rate by 0.5%, saving $100+ monthly on a $300,000 loan.";
-    }
-
-    // Inflation
-    else if (query.includes("inflation")) {
-      return "Inflation affects loans in several ways:\n\n• For borrowers with fixed-rate loans, inflation is generally beneficial as you repay the loan with money that's worth less than when you borrowed it.\n\n• For variable-rate loans, rates may increase with inflation, raising your EMI.\n\n• Inflation often leads to increased interest rates as central banks try to control rising prices.\n\n• High inflation periods may be good times to consider locking in fixed-rate loans before rates rise further.\n\nWhen planning long-term loans, it's wise to consider potential inflation impacts on your repayment capacity and build in some buffer in your budget.";
-    }
-
-    // Amortization
-    else if (query.includes("amortization")) {
-      return "Amortization is the process of spreading out a loan into a series of fixed payments over time. Each payment goes toward both principal and interest, with earlier payments primarily covering interest and later payments covering more principal.\n\nKey points about amortization:\n• In the early years of a loan, most of your payment goes toward interest\n• As time passes, more of each payment goes toward reducing the principal\n• An amortization schedule shows exactly how much principal and interest you pay each month\n• Extra payments toward principal can significantly change your amortization schedule and save on interest\n\nWould you like me to generate a sample amortization schedule for your loan?";
-    }
-
-    // Default response
-    else {
-      return "I can help you understand loan calculations, EMIs, interest rates, and more. Try asking questions like 'What is EMI?', 'Show me my EMI calculation', or 'How can I reduce my interest payments?'\n\nYou can also explore specific topics like loan prepayment, credit score improvement, or choosing between fixed and floating interest rates.";
-    }
+        {/* Additional Info Section */}
+        {additional_info && (
+          <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-lg p-3 border border-blue-500/30 backdrop-blur-sm">
+            <div className="flex items-start">
+              <Info className="h-4 w-4 text-blue-300 mr-2 mt-0.5 flex-shrink-0" />
+              <p className="text-blue-200 text-sm">{additional_info}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Render typing indicator
@@ -382,84 +422,69 @@ const AiFinancialChat = () => {
 
               {/* Chat Messages */}
               <div
-  ref={chatContainerRef}
-  className="overflow-y-auto p-4 space-y-1 bg-gradient-to-b from-gray-900/40 to-gray-900/80"
-  style={{
-    height: '70vh', // Static height (adjust as needed)
-    maxHeight: '300px', // Maximum height to prevent overflow on smaller screens
-    scrollBehavior: 'smooth',
-  }}
->
-  {/* Feature highlight */}
-  {showFeatureHighlight && (
-    <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-xl border border-blue-500/30 p-3 mb-6 relative">
-      <button
-        className="absolute top-2 right-2 text-gray-400 hover:text-white"
-        onClick={() => setShowFeatureHighlight(false)}
-      >
-        ✕
-      </button>
-      <h4 className="text-blue-300 font-medium mb-1 flex items-center">
-        <Sparkles className="h-4 w-4 mr-1" />
-        New Financial Intelligence Features
-      </h4>
-      <p className="text-gray-300 text-sm">
-        Explore our enhanced AI advisor with personalized recommendations, real-time market insights, and interactive loan calculations.
-      </p>
-      <div className="flex gap-2 mt-2">
-        <button className="px-3 py-1 bg-blue-500/30 rounded-lg text-blue-300 text-xs hover:bg-blue-500/50 transition-colors">
-          Take Tour
-        </button>
-        <button className="px-3 py-1 bg-gray-800/50 rounded-lg text-gray-300 text-xs hover:bg-gray-800/70 transition-colors">
-          Learn More
-        </button>
-      </div>
-    </div>
-  )}
-
-  {messages.map((msg, index) => (
-    <div
-      key={index}
-      className={`flex mb-4 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-      style={{
-        animation: 'fade-in-up 0.3s ease-out forwards',
-        animationDelay: `${index * 50}ms`,
-        opacity: 0,
-      }}
-    >
-      <div className="flex items-start max-w-[85%]">
-        {msg.type !== 'user' && (
-          <div className="px-3 py-3 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mr-2 shadow-lg relative group">
-            <div className="absolute inset-0 bg-blue-500/50 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <Bot className="h-5 w-5 text-white relative z-10" />
-          </div>
-        )}
-        <div>
-          <div
-            className={`rounded-2xl px-4 py-3 shadow-md backdrop-blur-sm ${
-              msg.type === 'user'
-                ? 'bg-gradient-to-r from-emerald-600/90 to-emerald-500/90 text-white rounded-tr-none ml-2 border border-emerald-400/30'
-                : 'bg-gradient-to-r from-gray-800/90 to-gray-800/80 text-gray-200 rounded-tl-none border border-gray-700/50 ml-1'
-            }`}
-          >
-            <p className="text-sm whitespace-pre-line leading-relaxed">{msg.content}</p>
-          </div>
-          <div className={`text-xs text-gray-500 mt-1 flex items-center ${msg.type === 'user' ? 'justify-end mr-2' : 'ml-3'}`}>
-            <Clock className="h-3 w-3 mr-1" />
-            {formatTime(msg.timestamp)} • {formatDate(msg.timestamp)}
-          </div>
-        </div>
-        {msg.type === 'user' && (
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center ml-2 shadow-lg relative group">
-            <div className="absolute inset-0 bg-emerald-500/50 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <User className="h-5 w-5 text-white relative z-10" />
-          </div>
-        )}
-      </div>
-    </div>
-  ))}
-  {isLoading && renderTypingIndicator()}
-</div>
+                ref={chatContainerRef}
+                className="overflow-y-auto p-4 space-y-1 bg-gradient-to-b from-gray-900/40 to-gray-900/80"
+                style={{
+                  height: '70vh',
+                  maxHeight: '300px',
+                  scrollBehavior: 'smooth',
+                }}
+              >
+                {messages.map((msg, index) => (
+                  <div
+                    key={index}
+                    className={`flex mb-4 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                    style={{
+                      animation: 'fade-in-up 0.3s ease-out forwards',
+                      animationDelay: `${index * 50}ms`,
+                      opacity: 0,
+                    }}
+                  >
+                    <div className="flex items-start max-w-[85%]">
+                      {msg.type !== 'user' && (
+                        <div className="px-3 py-3 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mr-2 shadow-lg relative group">
+                          <div className="absolute inset-0 bg-blue-500/50 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                          <Bot className="h-5 w-5 text-white relative z-10" />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <div
+                          className={`rounded-2xl px-4 py-3 shadow-md backdrop-blur-sm ${msg.type === 'user'
+                              ? 'bg-gradient-to-r from-emerald-600/90 to-emerald-500/90 text-white rounded-tr-none ml-2 border border-emerald-400/30'
+                              : msg.isError 
+                                ? 'bg-gradient-to-r from-red-800/90 to-red-700/80 text-red-200 rounded-tl-none border border-red-600/50 ml-1'
+                                : 'bg-gradient-to-r from-gray-800/90 to-gray-800/80 text-gray-200 rounded-tl-none border border-gray-700/50 ml-1'
+                            }`}
+                        >
+                          <p className="text-sm whitespace-pre-line leading-relaxed">{msg.content}</p>
+                          
+                          {/* Render unified structured content if available */}
+                          {msg.response && renderStructuredContent(msg.response)}
+                          
+                          {/* Show model used if available */}
+                          {msg.modelUsed && (
+                            <div className="mt-2 text-xs text-gray-400 flex items-center">
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              Powered by {msg.modelUsed}
+                            </div>
+                          )}
+                        </div>
+                        <div className={`text-xs text-gray-500 mt-1 flex items-center ${msg.type === 'user' ? 'justify-end mr-2' : 'ml-3'}`}>
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatTime(msg.timestamp)} • {formatDate(msg.timestamp)}
+                        </div>
+                      </div>
+                      {msg.type === 'user' && (
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center ml-2 shadow-lg relative group">
+                          <div className="absolute inset-0 bg-emerald-500/50 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                          <User className="h-5 w-5 text-white relative z-10" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {isLoading && renderTypingIndicator()}
+              </div>
 
               {/* Category pills */}
               <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 border-t border-gray-700/40 py-2 pl-4 pr-2 overflow-x-auto flex gap-2 no-scrollbar">
@@ -500,7 +525,7 @@ const AiFinancialChat = () => {
                     className={`flex gap-2 ${isPaused ? '' : 'animate-infinite-scroll'}`}
                     style={{
                       display: 'flex',
-                      width: 'max-content', // Ensure content width is sufficient
+                      width: 'max-content',
                     }}
                   >
                     {/* Duplicate questions to create seamless loop */}
@@ -508,7 +533,7 @@ const AiFinancialChat = () => {
                       const category = questionCategories.find(cat => cat.name === item.category);
                       return (
                         <div
-                          key={`${item.text}-${idx}`} // Unique key for duplicated items
+                          key={`${item.text}-${idx}`}
                           onClick={() => handleQuickQuestion(item.text)}
                           className={`snap-start whitespace-nowrap px-4 py-2 bg-gradient-to-r ${category?.color || 'from-blue-600/40 to-indigo-600/40'} text-white text-sm rounded-lg ${category?.borderColor || 'border-blue-500/40'} border cursor-pointer hover:bg-blue-600/60 transition-all hover:scale-105 flex-shrink-0 shadow-lg hover:shadow-blue-500/20 hover:border-blue-400/60 backdrop-blur-sm group relative min-w-[200px]`}
                         >
@@ -538,19 +563,39 @@ const AiFinancialChat = () => {
                       type="text"
                       value={currentMessage}
                       onChange={(e) => setCurrentMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
                       placeholder="Ask anything about EMI, loans, or financial planning..."
                       className="flex-1 px-5 py-4 bg-transparent text-white focus:outline-none relative z-10 placeholder-gray-400"
+                      disabled={isLoading}
                     />
                     <button
                       onClick={handleSendMessage}
-                      className={`h-12 w-12 flex items-center justify-center mx-2 rounded-full transition-all duration-300 relative z-10 ${currentMessage.trim()
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
+                      className={`h-12 w-12 flex items-center justify-center mx-2 rounded-full transition-all duration-300 relative z-10 ${currentMessage.trim() && !isLoading
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg hover:shadow-emerald-500/20'
                         : 'text-gray-500'}`}
-                      disabled={!currentMessage.trim()}
+                      disabled={!currentMessage.trim() || isLoading}
                     >
-                      <Send className={`h-5 w-5 ${currentMessage.trim() ? 'animate-pulse' : ''}`} />
+                      {isLoading ? (
+                        <RefreshCcw className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Send className={`h-5 w-5 ${currentMessage.trim() ? 'animate-pulse' : ''}`} />
+                      )}
                     </button>
+                  </div>
+                </div>
+
+                {/* Connection status */}
+                <div className="mt-2 text-center">
+                  <div className="inline-flex items-center text-xs">
+                    <div className="h-2 w-2 bg-emerald-400 rounded-full mr-2 animate-pulse"></div>
+                    <span className="text-gray-400">
+                      Connected to AI Financial Assistant
+                      {sessionId && (
+                        <span className="ml-2 text-gray-500">
+                          • Session: {sessionId.slice(-8)}
+                        </span>
+                      )}
+                    </span>
                   </div>
                 </div>
 
@@ -640,61 +685,6 @@ const AiFinancialChat = () => {
           }
         }
         
-        .animate-gradient-x {
-          background-size: 200% 200%;
-          animation: gradient-x 15s ease infinite;
-        }
-        
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-
-        @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        @keyframes float-particle {
-          0% {
-            transform: translateY(0) translateX(0);
-          }
-          25% {
-            transform: translateY(-20px) translateX(10px);
-          }
-          50% {
-            transform: translateY(0) translateX(20px);
-          }
-          75% {
-            transform: translateY(20px) translateX(10px);
-          }
-          100% {
-            transform: translateY(0) translateX(0);
-          }
-        }
-        
-        @keyframes gradient-x {
-          0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-          100% {
-            background-position: 0% 50%;
-          }
-        }
-        
         @keyframes infinite-scroll {
           0% {
             transform: translateX(0);
@@ -705,7 +695,7 @@ const AiFinancialChat = () => {
         }
         
         .animate-infinite-scroll {
-          animation: infinite-scroll 60s linear infinite; /* Increased from 30s to 60s */
+          animation: infinite-scroll 60s linear infinite;
         }
         
         .animate-gradient-x {

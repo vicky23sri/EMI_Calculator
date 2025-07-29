@@ -119,7 +119,7 @@ const SignIn = () => {
                 </div>
                 
                 <div className="text-sm">
-                  <a href="#" className="text-emerald-500 hover:text-emerald-400 font-medium underline-offset-4 hover:underline transition-all duration-300">
+                  <a href="/forgotpassword" className="text-emerald-500 hover:text-emerald-400 font-medium underline-offset-4 hover:underline transition-all duration-300">
                     Forgot password?
                   </a>
                 </div>
@@ -165,7 +165,7 @@ const SignIn = () => {
               <p className="text-gray-300 text-sm font-semibold">
                 Don't have an account?{" "}
                 <Link to="/signup" className="text-emerald-500 hover:text-emerald-400 font-semibold hover:underline underline-offset-4 transition-all duration-300">
-                  Sign up
+                  New Account
                 </Link>
               </p>
             </div>
