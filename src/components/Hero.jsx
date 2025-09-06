@@ -47,17 +47,25 @@ const Hero = () => {
             Transform your financial future with WealthWise AI. Our advanced EMI calculator combines cutting-edge AI with comprehensive market analysis to deliver personalized payment schedules, interest optimization, and strategic financial recommendations.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-center mb-8 md:mb-12">
-            <Button href="/calculator" white className="px-8 py-4 font-medium">
+            <Button href="/ai" white className="px-8 py-4 font-medium">
               <span className="flex items-center">
-                Calculate Now
+                AI Calculator
                 <svg className="ml-2 w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </span>
             </Button>
-            <Button href="/learn-more" light className="px-8 py-4 font-medium">
-              Learn More
+            <Button href="/manual" white className="px-8 py-4 font-medium">
+              <span className="flex items-center">
+                Manual Calculator
+                <svg className="ml-2 w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </span>
             </Button>
+            {/* <Button href="/learn-more" light className="px-8 py-4 font-medium">
+              Learn More
+            </Button> */}
           </div>
         </div>
         <div className="relative max-w-[23rem] mx-auto md:max-w-7xl xl:mb-24">

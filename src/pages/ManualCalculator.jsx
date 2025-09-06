@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom"; // Added import for useLocation
 import {
   CreditCard,
   Calendar,
@@ -17,6 +18,9 @@ import {
 } from "lucide-react";
 
 const ManualCalculator = () => {
+  // Access navigation state
+  const location = useLocation();
+
   // State for form inputs
   const [loanAmount, setLoanAmount] = useState(1000000);
   const [interestRate, setInterestRate] = useState(8.5);
@@ -33,6 +37,50 @@ const ManualCalculator = () => {
   const [totalAmount, setTotalAmount] = useState(0);
   const [amortizationData, setAmortizationData] = useState([]);
   const [activeTab, setActiveTab] = useState("summary");
+
+  // Initialize state with passed parameters on mount
+  useEffect(() => {
+    console.log("location.state:", location.state); // Log the entire location.state for debugging
+    if (location.state) {
+      // Correct property names based on your console log
+      const { principal, rate, tenure } = location.state;
+      
+      // Log the destructured values with correct names
+      console.log("Destructured Values from location.state:", {
+        principal,
+        rate,
+        tenure
+      });
+      
+      // Update state with passed parameters if they exist and are valid
+      if (principal !== undefined && !isNaN(principal)) {
+        setLoanAmount(Number(principal));
+      } else {
+        console.warn("principal is undefined or invalid:", principal);
+      }
+      
+      if (rate !== undefined && !isNaN(rate)) {
+        setInterestRate(Number(rate));
+      } else {
+        console.warn("rate is undefined or invalid:", rate);
+      }
+      
+      if (tenure !== undefined && !isNaN(tenure)) {
+        // tenure is already in months (240), convert to years if >= 12
+        if (tenure >= 12) {
+          setLoanTenure(Math.round(tenure / 12));
+          setTenureType("years");
+        } else {
+          setLoanTenure(tenure);
+          setTenureType("months");
+        }
+      } else {
+        console.warn("tenure is undefined or invalid:", tenure);
+      }
+    } else {
+      console.warn("location.state is null or undefined");
+    }
+  }, [location.state]);
 
   // Calculate EMI and related values whenever inputs change
   useEffect(() => {

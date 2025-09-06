@@ -1,275 +1,210 @@
+// src/components/AiCalculator.js
 import React, { useState, useEffect, useRef } from "react";
 import {
-  User, Send, Calculator, Clock, Bot, RefreshCcw, PieChart, ChevronRight,
-  Sparkles, Coins, DollarSign, Zap, TrendingUp, ChartBar, Gift,
-  Shield, Award, FileText, BriefcaseBusiness, Wallet, CreditCard,
-  ArrowUpRight, ArrowDownCircle, BadgeCheck, BarChart4, AlertCircle,
-  CheckCircle, Info, Star
+  User, Send, Calculator, Clock, Bot, RefreshCcw, MessageCircle,
+  Sparkles, DollarSign, TrendingUp, PieChart,
+  Shield, Award, Wallet, CreditCard,
+  ArrowUpRight, BadgeCheck, Info, Star, Menu,
+  ChevronDown, CheckCircle, Zap,
+  Brain, Target, BarChart3, Globe, Mic, Image,
+  Settings, Search, Plus, ArrowRight, TrendingDown,
+  Download
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import QuickActions from "../components/QuickAction";
+import { sendMessageToAPI, handleDownload as apiHandleDownload } from '../utils/api.jsx';
+import '../styles/AiCalculator.css';
 
-const AiFinancialChat = () => {
-  // Predefined questions with categories
-  const questionCategories = [
-    {
-      name: "EMI Basics",
-      icon: <Calculator className="h-4 w-4 text-emerald-300" />,
-      color: "from-emerald-600/40 to-emerald-500/40",
-      borderColor: "border-emerald-500/40",
-      hoverColor: "hover:from-emerald-600/60 hover:to-emerald-500/60",
-      questions: [
-        "What is EMI?",
-        "Calculate my EMI",
-        "Explain loan tenure",
-        "Explain amortization"
-      ]
-    },
-    {
-      name: "Loan Strategy",
-      icon: <ChartBar className="h-4 w-4 text-blue-300" />,
-      color: "from-blue-600/40 to-blue-500/40",
-      borderColor: "border-blue-500/40",
-      hoverColor: "hover:from-blue-600/60 hover:to-blue-500/60",
-      questions: [
-        "How can I reduce my interest payments?",
-        "What happens if I prepay my loan?",
-        "Is fixed or floating interest rate better?",
-        "Best time to refinance?"
-      ]
-    },
-    {
-      name: "Financial Planning",
-      icon: <Wallet className="h-4 w-4 text-purple-300" />,
-      color: "from-purple-600/40 to-purple-500/40",
-      borderColor: "border-purple-500/40",
-      hoverColor: "hover:from-purple-600/60 hover:to-purple-500/60",
-      questions: [
-        "How to improve my credit score?",
-        "Should I take a longer loan tenure?",
-        "Down payment tips",
-        "Compare home vs car loan"
-      ]
-    },
-    {
-      name: "Market Insights",
-      icon: <TrendingUp className="h-4 w-4 text-amber-300" />,
-      color: "from-amber-600/40 to-amber-500/40",
-      borderColor: "border-amber-500/40",
-      hoverColor: "hover:from-amber-600/60 hover:to-amber-500/60",
-      questions: [
-        "How does inflation affect my loan?",
-        "Current interest rate trends",
-        "Market forecast for home loans",
-        "Best investment while repaying loans"
-      ]
+// Updated LoanManualButton component with console.log
+const LoanManualButton = ({ parameters }) => {
+  const navigate = useNavigate();
+
+  const handleManualClick = () => {
+    if (!parameters) {
+      console.error("No parameters available for manual adjustment.");
+      return;
     }
-  ];
+    // Log the parameters to the console
+    console.log("Loan Parameters:", parameters);
+    // Navigate to /manual and pass parameters as state
+    navigate('/manual', { state: { ...parameters } });
+  };
 
-  // Flatten questions for search
-  const predefinedQuestions = questionCategories.flatMap(category =>
-    category.questions.map(q => ({ text: q, category: category.name }))
+  return (
+    <button
+      onClick={handleManualClick}
+      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all"
+      disabled={!parameters}
+    >
+      <Settings className="h-4 w-4" />
+      Manual Adjustment
+    </button>
   );
+};
 
-  // Initial welcome message
+// Rest of the AiCalculator component remains unchanged
+const AiCalculator = () => {
   const [messages, setMessages] = useState([
     {
-      type: "system",
-      content: "Hello! I'm your AI financial assistant. Ask me anything about EMI calculations, loans, or financial planning. You can select a question from the suggestions or type your own.",
-      timestamp: new Date()
+      id: 1,
+      type: "assistant",
+      content: "Welcome to WealthWise AI! I'm your advanced financial companion, ready to help you navigate the complex world of finance. Whether it's EMI calculations, investment strategies, or financial planning - I've got you covered!",
+      timestamp: new Date(Date.now() - 300000),
+      suggestions: [
+        "Calculate my home loan EMI",
+        "Best investment options for 2024",
+        "How to improve credit score?",
+        "Tax saving strategies"
+      ]
     }
   ]);
-
+  
   const [currentMessage, setCurrentMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const chatContainerRef = useRef(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isPaused, setIsPaused] = useState(false);
-  const [filteredQuestions, setFilteredQuestions] = useState(predefinedQuestions);
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [showScrollHint, setShowScrollHint] = useState(true);
-  const [theme, setTheme] = useState("dark");
-  const [uiMode, setUiMode] = useState("chat");
-  const [messageCount, setMessageCount] = useState(0);
-  const [showFeatureHighlight, setShowFeatureHighlight] = useState(true);
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [sessionId, setSessionId] = useState(null);
+  const chatContainerRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Format timestamp
-  const formatTime = (date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  // Trending topics with dynamic styling
+  const trendingTopics = [
+    { text: "Mutual Fund SIP strategies", trend: "up", percentage: "+15%" },
+    { text: "Fixed deposit vs equity", trend: "down", percentage: "-8%" },
+    { text: "Home loan prepayment benefits", trend: "up", percentage: "+23%" },
+    { text: "Crypto investment risks", trend: "up", percentage: "+42%" },
+    { text: "PPF vs ELSS comparison", trend: "down", percentage: "-5%" },
+    { text: "Emergency fund planning", trend: "up", percentage: "+18%" }
+  ];
 
-  const formatDate = (date) => {
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  };
-
-  // Handle window resize
+  // Check mobile on mount and resize
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const handleResize = () => {
-        setWindowWidth(window.innerWidth);
-        setIsMobile(window.innerWidth < 768);
-      };
-
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
-    }
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(false);
+      }
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Auto scroll chat to bottom
+  // Handle Excel file download using the /download endpoint
+  const handleDownload = async (filename, dataType, parameters) => {
+    try {
+      setIsLoading(true);
+      await apiHandleDownload(filename, dataType, parameters);
+    } catch (error) {
+      console.error(`Download Error for ${filename}:`, error.message);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          type: "assistant",
+          content: `Sorry, there was an issue downloading the file: ${error.message}. Please try again or contact support.`,
+          timestamp: new Date(),
+          isError: true
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!currentMessage.trim()) return;
+
+    const userMessage = {
+      id: Date.now(),
+      type: "user",
+      content: currentMessage.trim(),
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setCurrentMessage("");
+    setIsLoading(true);
+
+    try {
+      const apiResponse = await sendMessageToAPI(userMessage.content, sessionId);
+      
+      if (apiResponse.session_id && !sessionId) {
+        setSessionId(apiResponse.session_id);
+      }
+
+      const assistantMessage = {
+        id: Date.now() + 1,
+        type: "assistant",
+        content: apiResponse.response.message,
+        response: apiResponse.response,
+        timestamp: new Date(),
+        modelUsed: apiResponse.model_used
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: "assistant",
+        content: "I apologize, but I'm experiencing connectivity issues. Please try again in a moment.",
+        timestamp: new Date(),
+        isError: true
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleQuickAction = (action) => {
+    setCurrentMessage(action);
+    setTimeout(() => handleSendMessage(), 100);
+  };
+
+  // Auto scroll to bottom
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // Filter questions when search term changes
-  useEffect(() => {
-    const filtered = predefinedQuestions.filter(q =>
-      q.text.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (activeCategory === "all" || q.category === activeCategory)
-    );
-    setFilteredQuestions(filtered);
-  }, [searchTerm, activeCategory]);
-
-  const carouselRef = useRef(null);
-
-  const scrollCarousel = (direction) => {
-    if (carouselRef.current) {
-      const scrollAmount = direction === 'left' ? -200 : 200;
-      carouselRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
+  const formatTime = (date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Hide scroll hint after a while
-  useEffect(() => {
-    if (showScrollHint) {
-      const timer = setTimeout(() => {
-        setShowScrollHint(false);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [showScrollHint]);
-
-  // Hide feature highlight after a few messages
-  useEffect(() => {
-    if (messageCount > 3) {
-      setShowFeatureHighlight(false);
-    }
-  }, [messageCount]);
-
-  // API call to send message
-  const sendMessageToAPI = async (message) => {
-    try {
-      const response = await fetch('http://localhost:8000/api/v1/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: message,
-          session_id: sessionId || undefined
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Update session ID if provided
-      if (data.session_id && !sessionId) {
-        setSessionId(data.session_id);
-      }
-
-      return data;
-    } catch (error) {
-      console.error('API Error:', error);
-      throw error;
-    }
-  };
-
-  // Handle quick question selection
-  const handleQuickQuestion = (question) => {
-    setCurrentMessage(question);
-    document.getElementById('message-input')?.focus();
-  };
-
-  // Handle user message submission
-  const handleSendMessage = async () => {
-    if (!currentMessage.trim()) return;
-
-    const userMessage = currentMessage.trim();
-
-    // Add user message
-    setMessages(prev => [...prev, {
-      type: "user",
-      content: userMessage,
-      timestamp: new Date()
-    }]);
-
-    setMessageCount(prev => prev + 1);
-    setCurrentMessage("");
-
-    // Show loading state
-    setIsLoading(true);
-
-    try {
-      // Call API
-      const apiResponse = await sendMessageToAPI(userMessage);
-      
-      // Add system response with unified format
-      setMessages(prev => [...prev, {
-        type: "system",
-        content: apiResponse.response.message,
-        response: apiResponse.response, // Store full unified response object
-        timestamp: new Date(),
-        modelUsed: apiResponse.model_used
-      }]);
-    } catch (error) {
-      // Add error message
-      setMessages(prev => [...prev, {
-        type: "system",
-        content: "I'm sorry, I'm having trouble connecting to my knowledge base right now. Please try again in a moment.",
-        timestamp: new Date(),
-        isError: true
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Render unified structured content from API response
+  // Render structured API response content
   const renderStructuredContent = (response) => {
     if (!response) return null;
 
-    const { message, data, additional_info } = response;
+    const { message, data, additional_info, download_options } = response;
+    // Define allowed query types for download button
+    const allowedDownloadTypes = ['emi_schedule', 'transaction_history', 'investment_portfolio'];
 
     return (
       <div className="mt-4 space-y-4">
         {/* Main Content Section */}
         {data && data.content && (
-          <div className="bg-gradient-to-r from-blue-700/30 to-blue-600/30 rounded-lg p-4 border border-blue-600/40 backdrop-blur-sm">
-            <h4 className="text-blue-300 font-semibold text-sm mb-2 flex items-center">
-              <Info className="h-4 w-4 mr-2 text-blue-400" />
-              Answer
-            </h4>
+          <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl p-4 border border-blue-500/20 backdrop-blur-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+              <h4 className="text-blue-300 font-semibold text-sm">Analysis</h4>
+            </div>
             <p className="text-gray-300 text-sm leading-relaxed">{data.content}</p>
           </div>
         )}
 
         {/* Details Section */}
         {data && data.details && Array.isArray(data.details) && data.details.length > 0 && (
-          <div className="bg-gradient-to-r from-emerald-700/30 to-emerald-600/30 rounded-lg p-4 border border-emerald-600/40 backdrop-blur-sm">
-            <h4 className="text-emerald-300 font-semibold text-sm mb-3 flex items-center">
-              <CheckCircle className="h-4 w-4 mr-2 text-emerald-400" />
-              Details
-            </h4>
-            <div className="space-y-2">
+          <div className="bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-2xl p-4 border border-emerald-500/20 backdrop-blur-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle className="h-4 w-4 text-emerald-400" />
+              <h4 className="text-emerald-300 font-semibold text-sm">Key Insights</h4>
+            </div>
+            <div className="space-y-3">
               {data.details.map((detail, index) => (
-                <div key={index} className="flex items-start">
-                  <ChevronRight className="h-3 w-3 mr-2 mt-1 text-emerald-400 flex-shrink-0" />
+                <div key={index} className="flex items-start gap-3 p-3 bg-gray-800/30 rounded-xl">
+                  <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mt-2 flex-shrink-0"></div>
                   <p className="text-gray-300 text-sm leading-relaxed">{detail}</p>
                 </div>
               ))}
@@ -277,444 +212,379 @@ const AiFinancialChat = () => {
           </div>
         )}
 
-        {/* Additional Info Section */}
-        {additional_info && (
-          <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-lg p-3 border border-blue-500/30 backdrop-blur-sm">
-            <div className="flex items-start">
-              <Info className="h-4 w-4 text-blue-300 mr-2 mt-0.5 flex-shrink-0" />
-              <p className="text-blue-200 text-sm">{additional_info}</p>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Render typing indicator
-  const renderTypingIndicator = () => {
-    return (
-      <div className="flex justify-start mb-4">
-        <div className="flex items-start">
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mr-2 shadow-lg">
-            <Bot className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <div className="bg-gray-800/70 text-gray-200 rounded-2xl rounded-tl-none border border-gray-700/50 px-4 py-3 ml-1 shadow-md backdrop-blur-sm">
-              <div className="flex space-x-1.5">
-                <div className="h-2.5 w-2.5 bg-blue-400 rounded-full animate-pulse" style={{ animationDelay: "0ms" }}></div>
-                <div className="h-2.5 w-2.5 bg-blue-400 rounded-full animate-pulse" style={{ animationDelay: "200ms" }}></div>
-                <div className="h-2.5 w-2.5 bg-blue-400 rounded-full animate-pulse" style={{ animationDelay: "400ms" }}></div>
+        {/* Download Options Section */}
+        {download_options &&
+          download_options.available &&
+          Array.isArray(download_options.data_types) &&
+          download_options.data_types.length > 0 &&
+          download_options.data_types.some(dataType => allowedDownloadTypes.includes(dataType.type)) && (
+            <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl p-4 border border-purple-500/20 backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <Download className="h-4 w-4 text-purple-300" />
+                <h4 className="text-purple-300 font-semibold text-sm">Download Options</h4>
               </div>
-            </div>
-            <div className="text-xs text-gray-500 ml-3 mt-1 flex items-center">
-              <Clock className="h-3 w-3 mr-1" />
-              {formatTime(new Date())}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Icon background effect component
-  const IconBackgroundEffect = ({ children }) => (
-    <div className="relative group">
-      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-full blur-md group-hover:blur-xl transition-all duration-300 opacity-80 group-hover:opacity-100"></div>
-      <div className="relative">{children}</div>
-    </div>
-  );
-
-  // The main UI
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 bg-[radial-gradient(ellipse_at_top,rgba(40,160,150,0.15)_0,rgba(30,64,175,0.15)_50%,rgba(0,0,0,0)_80%)] pt-16">
-      <div className="container mx-auto px-4 py-6 lg:py-10 relative flex flex-col h-screen max-w-6xl">
-
-        {/* Floating particles background effect */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(30)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute bg-white/20 rounded-full blur-sm"
-              style={{
-                width: `${Math.random() * 5 + 1}px`,
-                height: `${Math.random() * 5 + 1}px`,
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                animation: `float-particle ${Math.random() * 10 + 20}s linear infinite`,
-                animationDelay: `${Math.random() * 5}s`,
-                opacity: Math.random() * 0.7 + 0.3
-              }}
-            ></div>
-          ))}
-        </div>
-
-        {/* Interactive orbs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-blue-500/10 blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/3 right-1/4 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl animate-pulse" style={{ animationDelay: "2s" }}></div>
-          <div className="absolute top-2/3 left-1/2 w-72 h-72 rounded-full bg-purple-500/10 blur-3xl animate-pulse" style={{ animationDelay: "4s" }}></div>
-        </div>
-
-        <div className="w-full relative flex flex-col z-10">
-          {/* App header */}
-          <div className="text-center mb-6">
-            <div className="inline-block relative">
-              <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-blue-400 to-purple-400 inline-block">
-                WealthWise AI
-              </h1>
-              <div className="absolute -top-2 -right-8 bg-gradient-to-r from-amber-500 to-pink-500 text-white text-xs px-2 py-0.5 rounded-full transform rotate-12 font-bold flex items-center">
-                <Sparkles className="h-3 w-3 mr-0.5" />
-                PRO
-              </div>
-            </div>
-            <div className="text-gray-300 text-sm mt-1 max-w-md mx-auto">Your intelligent financial companion for smarter money decisions</div>
-          </div>
-
-          <div className="relative flex-1 flex flex-col md:flex-row gap-4 h-full">
-            {/* Main chat interface */}
-            <div className="flex-1 h-full min-h-0 flex flex-col backdrop-blur-xl bg-black/60 border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-              {/* Glowing border effect */}
-              <div className="absolute inset-0 border-2 border-white/10 rounded-2xl pointer-events-none shadow-[0_0_30px_rgba(16,185,129,0.25)]"></div>
-
-              {/* Glass reflection effects */}
-              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-              <div className="absolute top-0 bottom-0 left-0 w-px bg-gradient-to-b from-white/30 via-white/10 to-transparent"></div>
-
-              {/* Chat Header */}
-              <div className="p-4 bg-gradient-to-r from-gray-800/80 to-gray-900/80 border-b border-gray-700/40 flex items-center justify-between backdrop-blur-md">
-                <div className="flex items-center">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center mr-3 shadow-lg relative group">
-                    <div className="absolute inset-0 rounded-xl bg-emerald-500 blur-md opacity-50 group-hover:opacity-70 transition-opacity"></div>
-                    <Calculator className="h-6 w-6 text-white relative z-10" />
-                    <div className="absolute -inset-0.5 rounded-xl border border-white/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-medium text-lg flex items-center">
-                      Financial Advisor
-                      <span className="ml-2 bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 text-emerald-400 text-xs px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center">
-                        <BadgeCheck className="h-3 w-3 mr-0.5" />
-                        AI-Powered
-                      </span>
-                    </h3>
-                    <div className="flex items-center text-xs text-emerald-400">
-                      <span className="h-2 w-2 bg-emerald-400 rounded-full mr-1.5 animate-pulse"></span>
-                      Available 24/7
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <div className="hidden md:block">
-                    <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-lg px-3 py-1 border border-blue-500/30">
-                      <div className="text-white font-medium">{new Date().toLocaleDateString([], { month: 'long', day: 'numeric' })}</div>
-                      <div className="text-xs text-blue-300">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                    </div>
-                  </div>
-
-                  {/* Stats buttons */}
-                  <div className="bg-gray-800/60 rounded-lg border border-gray-700/50 flex overflow-hidden">
-                    <button className="px-3 py-1.5 text-sm text-white hover:bg-blue-500/20 transition-colors">
-                      <span className="hidden md:inline">View </span>Stats
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chat Messages */}
-              <div
-                ref={chatContainerRef}
-                className="overflow-y-auto p-4 space-y-1 bg-gradient-to-b from-gray-900/40 to-gray-900/80"
-                style={{
-                  height: '70vh',
-                  maxHeight: '300px',
-                  scrollBehavior: 'smooth',
-                }}
-              >
-                {messages.map((msg, index) => (
-                  <div
-                    key={index}
-                    className={`flex mb-4 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                    style={{
-                      animation: 'fade-in-up 0.3s ease-out forwards',
-                      animationDelay: `${index * 50}ms`,
-                      opacity: 0,
-                    }}
-                  >
-                    <div className="flex items-start max-w-[85%]">
-                      {msg.type !== 'user' && (
-                        <div className="px-3 py-3 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mr-2 shadow-lg relative group">
-                          <div className="absolute inset-0 bg-blue-500/50 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                          <Bot className="h-5 w-5 text-white relative z-10" />
-                        </div>
-                      )}
+              <div className="space-y-3">
+                {download_options.data_types.map((dataType, index) => (
+                  allowedDownloadTypes.includes(dataType.type) && (
+                    <div key={index} className="flex items-start gap-3 p-3 bg-gray-800/30 rounded-xl">
+                      <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
                       <div className="flex-1">
-                        <div
-                          className={`rounded-2xl px-4 py-3 shadow-md backdrop-blur-sm ${msg.type === 'user'
-                              ? 'bg-gradient-to-r from-emerald-600/90 to-emerald-500/90 text-white rounded-tr-none ml-2 border border-emerald-400/30'
-                              : msg.isError 
-                                ? 'bg-gradient-to-r from-red-800/90 to-red-700/80 text-red-200 rounded-tl-none border border-red-600/50 ml-1'
-                                : 'bg-gradient-to-r from-gray-800/90 to-gray-800/80 text-gray-200 rounded-tl-none border border-gray-700/50 ml-1'
-                            }`}
-                        >
-                          <p className="text-sm whitespace-pre-line leading-relaxed">{msg.content}</p>
-                          
-                          {/* Render unified structured content if available */}
-                          {msg.response && renderStructuredContent(msg.response)}
-                          
-                          {/* Show model used if available */}
-                          {msg.modelUsed && (
-                            <div className="mt-2 text-xs text-gray-400 flex items-center">
-                              <Sparkles className="h-3 w-3 mr-1" />
-                              Powered by {msg.modelUsed}
-                            </div>
+                        <p className="text-gray-300 text-sm font-semibold">{dataType.description}</p>
+                        <p className="text-gray-400 text-xs">{dataType.contains}</p>
+                        <div className="mt-2 flex gap-3">
+                          <button
+                            onClick={() => handleDownload(dataType.filename, dataType.type, dataType.parameters)}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl hover:from-cyan-600 hover:to-blue-700 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all"
+                            disabled={isLoading || !dataType.parameters}
+                          >
+                            <Download className="h-4 w-4" />
+                            Download {download_options.formats && Array.isArray(download_options.formats) && download_options.formats.length > 0 ? download_options.formats[0] : "File"}
+                          </button>
+
+                          {dataType.type === 'emi_schedule' && (
+                            <LoanManualButton parameters={dataType.parameters} />
                           )}
                         </div>
-                        <div className={`text-xs text-gray-500 mt-1 flex items-center ${msg.type === 'user' ? 'justify-end mr-2' : 'ml-3'}`}>
-                          <Clock className="h-3 w-3 mr-1" />
-                          {formatTime(msg.timestamp)} • {formatDate(msg.timestamp)}
-                        </div>
+                        {!dataType.parameters && (
+                          <p className="text-red-400 text-xs mt-2">Download parameters not available. Contact support.</p>
+                        )}
                       </div>
-                      {msg.type === 'user' && (
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center ml-2 shadow-lg relative group">
-                          <div className="absolute inset-0 bg-emerald-500/50 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                          <User className="h-5 w-5 text-white relative z-10" />
-                        </div>
-                      )}
                     </div>
-                  </div>
+                  )
                 ))}
-                {isLoading && renderTypingIndicator()}
               </div>
+            </div>
+          )}
 
-              {/* Category pills */}
-              <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 border-t border-gray-700/40 py-2 pl-4 pr-2 overflow-x-auto flex gap-2 no-scrollbar">
-                <button
-                  onClick={() => setActiveCategory("all")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex items-center ${activeCategory === "all"
-                    ? "bg-blue-500/70 text-white border border-blue-400/50"
-                    : "bg-gray-800/70 text-gray-300 border border-gray-700/50 hover:bg-gray-700/50"
-                    }`}
-                >
-                  All Topics
-                </button>
+        {/* Additional Info Section */}
+        {/* {additional_info && (
+          <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl p-4 border border-purple-500/20 backdrop-blur-sm">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 text-purple-300 mt-0.5 flex-shrink-0" />
+              <p className="text-purple-200 text-sm leading-relaxed">{additional_info}</p>
+            </div>
+          </div>
+        )} */}
+      </div>
+    );
+  };
 
-                {questionCategories.map((category, idx) => (
+  const renderMessage = (message) => {
+    const isUser = message.type === "user";
+    
+    return (
+      <div key={message.id} className={`flex gap-4 mb-6 ${isUser ? 'flex-row-reverse' : ''} animate-fadeInUp`}>
+        <div className={`relative flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center ${
+          isUser 
+            ? 'bg-gradient-to-br from-cyan-400 to-blue-600 shadow-lg shadow-cyan-500/25' 
+            : 'bg-gradient-to-br from-emerald-400 to-green-600 shadow-lg shadow-emerald-500/25'
+        }`}>
+          <div className="absolute inset-0 rounded-2xl bg-white/10 backdrop-blur-sm"></div>
+          {isUser ? (
+            <User className="h-6 w-6 text-white relative z-10" />
+          ) : (
+            <Bot className="h-6 w-6 text-white relative z-10" />
+          )}
+          <div className={`absolute -inset-1 rounded-2xl blur-md ${
+            isUser ? 'bg-cyan-400/20' : 'bg-emerald-400/20'
+          } animate-pulse`}></div>
+        </div>
+
+        <div className={`flex-1 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
+          <div className={`rounded-3xl px-6 py-4 backdrop-blur-sm border ${
+            isUser 
+              ? 'bg-gradient-to-r from-cyan-500/90 to-blue-600/90 text-white border-cyan-400/30 ml-auto shadow-lg shadow-cyan-500/10'
+              : message.isError
+                ? 'bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-200 border-red-500/30 shadow-lg shadow-red-500/10'
+                : 'bg-gray-800/80 text-gray-100 border-gray-700/50 shadow-lg shadow-gray-900/20'
+          }`}>
+            <p className="text-sm leading-relaxed">{message.content}</p>
+            
+            {!isUser && message.response && renderStructuredContent(message.response)}
+            
+            {!isUser && message.modelUsed && (
+              <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+                <Sparkles className="h-3 w-3" />
+                <span>Powered by {message.modelUsed}</span>
+              </div>
+            )}
+
+            {!isUser && message.suggestions && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-400 mb-3">Try these:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {message.suggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleQuickAction(suggestion)}
+                      className="text-left p-3 text-sm text-cyan-300 hover:text-white hover:bg-cyan-500/20 rounded-xl transition-all border border-cyan-500/20 hover:border-cyan-400/40 group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{suggestion}</span>
+                        <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className={`flex items-center gap-1 mt-2 text-xs text-gray-500 ${
+            isUser ? 'justify-end' : 'justify-start'
+          }`}>
+            <Clock className="h-3 w-3" />
+            {formatTime(message.timestamp)}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white relative overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -left-1/4 w-96 h-96 rounded-full bg-gradient-to-r from-cyan-500/10 to-blue-500/10 blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 -right-1/4 w-96 h-96 rounded-full bg-gradient-to-r from-emerald-500/10 to-green-500/10 blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-gradient-to-r from-purple-500/5 to-pink-500/5 blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
+      </div>
+
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(50)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-1 h-1 bg-white/20 rounded-full animate-float"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 10}s`,
+              animationDuration: `${10 + Math.random() * 20}s`
+            }}
+          ></div>
+        ))}
+      </div>
+
+      <div className="relative z-10 flex h-screen">
+        {isMobile && (
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="fixed top-4 left-4 z-50 p-3 bg-gray-800/80 backdrop-blur-sm rounded-xl border border-gray-700/50 hover:bg-gray-700/80 transition-colors"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        )}
+
+        <div className={`${isMobile ? 'fixed inset-y-0 left-0 z-40' : 'relative'} w-80 bg-gray-900/80 backdrop-blur-xl border-r border-gray-800/50 flex flex-col transition-transform duration-300 ${
+          isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'
+        }`}>
+          {isMobile && sidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
+              onClick={() => setSidebarOpen(false)}
+            ></div>
+          )}
+
+          <div className="relative z-40 flex flex-col h-full">
+            <div className="p-6 border-b border-gray-800/50">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/25 relative">
+                  <div className="absolute inset-0 rounded-2xl bg-white/10 backdrop-blur-sm"></div>
+                  <Brain className="h-8 w-8 text-white relative z-10" />
+                  <div className="absolute -inset-1 rounded-2xl blur-md bg-cyan-400/20 animate-pulse"></div>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+                    WealthWise AI
+                  </h1>
+                  <p className="text-gray-400 text-sm">Advanced Financial Intelligence</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/20 rounded-xl border border-emerald-500/30">
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-emerald-300 font-medium">AI Online</span>
+                </div>
+                {sessionId && (
+                  <div className="text-xs text-gray-500">
+                    Session: {sessionId.slice(-6)}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6">
+              <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
+                <Zap className="h-4 w-4 text-yellow-400" />
+                Quick Actions
+              </h3>
+              <QuickActions onAction={handleQuickAction} />
+            </div>
+
+            <div className="p-6 flex-1 overflow-y-auto">
+              <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-green-400" />
+                Trending Topics
+              </h3>
+              <div className="space-y-2">
+                {trendingTopics.map((topic, index) => (
                   <button
-                    key={idx}
-                    onClick={() => setActiveCategory(category.name)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex items-center ${activeCategory === category.name
-                      ? "bg-blue-500/70 text-white border border-blue-400/50"
-                      : "bg-gray-800/70 text-gray-300 border border-gray-700/50 hover:bg-gray-700/50"
-                      }`}
+                    key={index}
+                    onClick={() => handleQuickAction(topic.text)}
+                    className="w-full text-left p-3 text-sm text-gray-300 hover:text-white hover:bg-gray-800/50 rounded-xl transition-all group border border-transparent hover:border-gray-700/50"
                   >
-                    <span className="mr-1.5">{category.icon}</span>
-                    {category.name}
+                    <div className="flex items-center justify-between">
+                      <span className="flex-1">{topic.text}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium ${
+                          topic.trend === 'up' ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {topic.percentage}
+                        </span>
+                        {topic.trend === 'up' ? (
+                          <TrendingUp className="h-3 w-3 text-green-400" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-red-400" />
+                        )}
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
 
-              {/* Question carousel */}
-              <div className="relative bg-gradient-to-r from-gray-900/80 to-gray-800/80 px-5 border-t border-gray-700/40">
-                <div
-                  ref={carouselRef}
-                  className="overflow-x-hidden py-3 px-4 snap-x snap-mandatory touch-pan-x scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900 relative"
-                  onMouseEnter={() => setIsPaused(true)}
-                  onMouseLeave={() => setIsPaused(false)}
-                >
-                  <div
-                    className={`flex gap-2 ${isPaused ? '' : 'animate-infinite-scroll'}`}
-                    style={{
-                      display: 'flex',
-                      width: 'max-content',
-                    }}
-                  >
-                    {/* Duplicate questions to create seamless loop */}
-                    {[...filteredQuestions, ...filteredQuestions].map((item, idx) => {
-                      const category = questionCategories.find(cat => cat.name === item.category);
-                      return (
-                        <div
-                          key={`${item.text}-${idx}`}
-                          onClick={() => handleQuickQuestion(item.text)}
-                          className={`snap-start whitespace-nowrap px-4 py-2 bg-gradient-to-r ${category?.color || 'from-blue-600/40 to-indigo-600/40'} text-white text-sm rounded-lg ${category?.borderColor || 'border-blue-500/40'} border cursor-pointer hover:bg-blue-600/60 transition-all hover:scale-105 flex-shrink-0 shadow-lg hover:shadow-blue-500/20 hover:border-blue-400/60 backdrop-blur-sm group relative min-w-[200px]`}
-                        >
-                          <div className="absolute inset-0 bg-blue-400/10 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                          <span className="relative z-10 flex items-center">
-                            {category?.icon || <Sparkles className="h-3.5 w-3.5 mr-1.5 text-blue-300" />}
-                            <span className="ml-1.5">{item.text}</span>
-                          </span>
-                        </div>
-                      );
+        <div className="flex-1 flex flex-col bg-gray-900/40 backdrop-blur-sm">
+          <div className="p-6 border-b border-gray-800/50 bg-gray-900/60 backdrop-blur-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center">
+                    <MessageCircle className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-white">Financial Consultation</h2>
+                    <p className="text-gray-400 text-sm">AI-powered financial guidance</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 rounded-xl border border-blue-500/30">
+                  <BadgeCheck className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium text-blue-300">Verified AI</span>
+                </div>
+                <div className="text-right hidden md:block">
+                  <div className="text-sm font-medium text-white">
+                    {new Date().toLocaleDateString('en-US', { 
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric'
                     })}
                   </div>
-                </div>
-                {/* Gradient fade effects */}
-                <div className="absolute top-0 bottom-0 left-0 w-12 bg-gradient-to-r from-gray-900/90 to-transparent pointer-events-none z-0"></div>
-                <div className="absolute top-0 bottom-0 right-0 w-12 bg-gradient-to-l from-gray-900/90 to-transparent pointer-events-none z-0"></div>
-              </div>
-              {/* Chat Input - Enhanced */}
-              <div className="p-4 border-t border-gray-700/30 bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-md">
-                <div className="flex flex-col">
-                  <div className="flex items-center rounded-xl bg-gradient-to-r from-gray-800/90 to-gray-700/80 border border-gray-600/30 overflow-hidden shadow-lg group hover:border-gray-500/50 transition-all duration-300 relative">
-                    {/* Input glow effect */}
-                    <div className="absolute -inset-1 bg-gradient-to-r from-emerald-600/10 via-blue-600/10 to-purple-600/10 rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-300 animate-gradient-x"></div>
-
-                    <input
-                      id="message-input"
-                      type="text"
-                      value={currentMessage}
-                      onChange={(e) => setCurrentMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
-                      placeholder="Ask anything about EMI, loans, or financial planning..."
-                      className="flex-1 px-5 py-4 bg-transparent text-white focus:outline-none relative z-10 placeholder-gray-400"
-                      disabled={isLoading}
-                    />
-                    <button
-                      onClick={handleSendMessage}
-                      className={`h-12 w-12 flex items-center justify-center mx-2 rounded-full transition-all duration-300 relative z-10 ${currentMessage.trim() && !isLoading
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg hover:shadow-emerald-500/20'
-                        : 'text-gray-500'}`}
-                      disabled={!currentMessage.trim() || isLoading}
-                    >
-                      {isLoading ? (
-                        <RefreshCcw className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <Send className={`h-5 w-5 ${currentMessage.trim() ? 'animate-pulse' : ''}`} />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Connection status */}
-                <div className="mt-2 text-center">
-                  <div className="inline-flex items-center text-xs">
-                    <div className="h-2 w-2 bg-emerald-400 rounded-full mr-2 animate-pulse"></div>
-                    <span className="text-gray-400">
-                      Connected to AI Financial Assistant
-                      {sessionId && (
-                        <span className="ml-2 text-gray-500">
-                          • Session: {sessionId.slice(-8)}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Mobile features */}
-                <div className="mt-4 text-center">
-                  <div className="inline-flex items-center text-gray-300 text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-emerald-300">
-                    <BarChart4 className="h-4 w-4 mr-1.5 text-blue-400" />
-                    Smart Financial Analysis
-                  </div>
-
-                  <div className="flex items-center justify-center flex-wrap gap-4 mt-4">
-                    <div className="flex items-center text-gray-300 text-xs hover:text-emerald-300 transition-colors group">
-                      <IconBackgroundEffect>
-                        <RefreshCcw className="h-4 w-4 mr-1.5 text-emerald-500 group-hover:text-emerald-300 transition-colors" />
-                      </IconBackgroundEffect>
-                      <span className="hidden sm:inline">Real-time</span> Calculations
-                    </div>
-                    <div className="flex items-center text-gray-300 text-xs hover:text-blue-300 transition-colors group">
-                      <IconBackgroundEffect>
-                        <PieChart className="h-4 w-4 mr-1.5 text-blue-500 group-hover:text-blue-300 transition-colors" />
-                      </IconBackgroundEffect>
-                      <span className="hidden sm:inline">Interactive</span> Insights
-                    </div>
-                    <div className="flex items-center text-gray-300 text-xs hover:text-purple-300 transition-colors group">
-                      <IconBackgroundEffect>
-                        <Sparkles className="h-4 w-4 mr-1.5 text-purple-500 group-hover:text-purple-300 transition-colors" />
-                      </IconBackgroundEffect>
-                      <span className="hidden sm:inline">Personalized</span> Advice
-                    </div>
+                  <div className="text-xs text-gray-400">
+                    {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
+          <div 
+            ref={chatContainerRef}
+            className="flex-1 overflow-y-auto p-6 space-y-1"
+            style={{ maxHeight: 'calc(100vh - 200px)' }}
+          >
+            {messages.map(renderMessage)}
+            
+            {isLoading && (
+              <div className="flex gap-4 mb-6 animate-fadeInUp">
+                <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/25 relative">
+                  <div className="absolute inset-0 rounded-2xl bg-white/10 backdrop-blur-sm"></div>
+                  <Bot className="h-6 w-6 text-white relative z-10" />
+                  <div className="absolute -inset-1 rounded-2xl blur-md bg-emerald-400/20 animate-pulse"></div>
+                </div>
+                <div className="flex-1">
+                  <div className="bg-gray-800/80 border border-gray-700/50 rounded-3xl px-6 py-4 shadow-lg backdrop-blur-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      </div>
+                      <span className="text-sm text-gray-400 ml-2">AI is analyzing your query...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="p-6 border-t border-gray-800/50 bg-gray-900/60 backdrop-blur-xl">
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <textarea
+                    value={currentMessage}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder="Ask me anything about EMI, loans, investments, or financial planning..."
+                    className="w-full p-2 pr-12 bg-gray-800/60 border border-gray-700/50 rounded-2xl focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 resize-none text-white placeholder-gray-400 backdrop-blur-sm transition-all"
+                    rows="3"
+                    disabled={isLoading}
+                  />
+                  <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                    <span className="text-xs text-gray-500">
+                      {currentMessage.length}/1000
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between mt-3">
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className="flex items-center gap-1">
+                      <Zap className="h-3 w-3 text-yellow-400" />
+                      <span>Advanced AI</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Shield className="h-3 w-3 text-green-400" />
+                      <span>Secure & Private</span>
+                    </div>
+                  </div>
+                  
+                  <div className="text-xs text-gray-500 hidden sm:block">
+                    Press Enter to send • Shift+Enter for new line
+                  </div>
+                </div>
+              </div>
+              
+              <button
+                onClick={handleSendMessage}
+                disabled={!currentMessage.trim() || isLoading}
+                className={`p-4 rounded-2xl transition-all ${
+                  currentMessage.trim() && !isLoading
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-105'
+                    : 'bg-gray-800/60 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {isLoading ? (
+                  <RefreshCcw className="h-6 w-6 animate-spin" />
+                ) : (
+                  <Send className="h-6 w-6" />
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Floating mobile action button - only visible on mobile */}
-      {isMobile && (
-        <div className="fixed bottom-6 right-6 z-20">
-          <button className="h-14 w-14 rounded-full bg-gradient-to-r from-emerald-500 to-blue-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <Calculator className="h-6 w-6 text-white" />
-          </button>
-        </div>
-      )}
-
-      {/* Global CSS for animations */}
-      <style jsx global>{`
-        @keyframes fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        @keyframes float-particle {
-          0% {
-            transform: translateY(0) translateX(0);
-          }
-          25% {
-            transform: translateY(-20px) translateX(10px);
-          }
-          50% {
-            transform: translateY(0) translateX(20px);
-          }
-          75% {
-            transform: translateY(20px) translateX(10px);
-          }
-          100% {
-            transform: translateY(0) translateX(0);
-          }
-        }
-        
-        @keyframes gradient-x {
-          0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-          100% {
-            background-position: 0% 50%;
-          }
-        }
-        
-        @keyframes infinite-scroll {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-        
-        .animate-infinite-scroll {
-          animation: infinite-scroll 60s linear infinite;
-        }
-        
-        .animate-gradient-x {
-          background-size: 200% 200%;
-          animation: gradient-x 15s ease infinite;
-        }
-        
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}
-      </style>
     </div>
   );
 };
 
-export default AiFinancialChat;
+export default AiCalculator;
