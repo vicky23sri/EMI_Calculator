@@ -176,6 +176,7 @@ const AiCalculator = () => {
   // Render structured API response content
   const renderStructuredContent = (response) => {
     if (!response) return null;
+    console.log("response", response);
 
     const { message, data, additional_info, download_options } = response;
     // Define allowed query types for download button
@@ -270,6 +271,7 @@ const AiCalculator = () => {
   };
 
   const renderMessage = (message) => {
+    console.log("message", message)
     const isUser = message.type === "user";
     
     return (
